@@ -51,8 +51,8 @@ jobs:
         fi
 
     - name: Delete feature branch if both merges occurred
-        if: env.delete == 'true'
-       run: |
+      if: env.delete == 'true'
+      run: |
         FEATURE_BRANCH="${{ github.event.pull_request.head.ref }}"
         
         # 僅刪除以 feature/ 開頭的分支
