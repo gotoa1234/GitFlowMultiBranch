@@ -50,15 +50,4 @@ jobs:
           echo "delete=false" >> $GITHUB_ENV
         fi
 
-    - name: Delete feature branch if both merges occurred
-      if: env.delete == 'true'
-      run: |
-        FEATURE_BRANCH="${{ github.event.pull_request.head.ref }}"
-        
-        # 僅刪除以 feature/ 開頭的分支
-        if [[ "$FEATURE_BRANCH" == feature/* ]]; then
-          echo "Deleting branch $FEATURE_BRANCH";
-          git push origin --delete "$FEATURE_BRANCH"
-        else
-          echo "Skipping deletion. Not a feature branch: $FEATURE_BRANCH";
-        fi
+    
