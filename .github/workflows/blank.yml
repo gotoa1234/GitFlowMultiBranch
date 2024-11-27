@@ -1,36 +1,64 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: Delete Feature Branch After Merge to DEV and QAT
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
+    branches: [ "featureA" ]
   pull_request:
-    branches: [ "main" ]
+    types: [closed]  # 當 PR 被關閉（即合併）時觸發
+    branches:
+      - develop
+      - Qat
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  delete-feature-branch:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+    - name: Checkout the repository
+      uses: actions/checkout@v3
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+    - name: Set up Git
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+    - name: Check if the PR is merged into both DEV and QAT
+      id: check-merge
+      run: |
+        # Get the PR ID from the context
+        PR_ID=${{ github.event.pull_request.number }}
+        
+        # Use GitHub API to check the merge status for DEV and QAT
+        develop_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID/commits" | \
+          jq -r '.[].commit.message' | grep -q "Merge pull request" && echo "true" || echo "false")
+
+        Qat_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID/commits" | \
+          jq -r '.[].commit.message' | grep -q "Merge pull request" && echo "true" || echo "false")
+        
+        echo "DEV merge status: $develop_MERGE_STATUS"
+        echo "QAT merge status: $Qat_MERGE_STATUS"
+
+        if [[ "$develop_MERGE_STATUS" == "true" && "$Qat_MERGE_STATUS" == "true" ]]; then
+          echo "Both DEV and QAT merges detected. Proceeding with branch deletion.";
+          echo "delete=true" >> $GITHUB_ENV
+        else
+          echo "PR is not merged into both DEV and QAT. Skipping branch deletion.";
+          echo "delete=false" >> $GITHUB_ENV
+        fi
+
+    - name: Delete feature branch if both merges occurred
+        if: env.delete == 'true'
+       run: |
+        FEATURE_BRANCH="${{ github.event.pull_request.head.ref }}"
+        
+        # 僅刪除以 feature/ 開頭的分支
+        if [[ "$FEATURE_BRANCH" == feature/* ]]; then
+          echo "Deleting branch $FEATURE_BRANCH";
+          git push origin --delete "$FEATURE_BRANCH"
+        else
+          echo "Skipping deletion. Not a feature branch: $FEATURE_BRANCH";
+        fi
