@@ -1,0 +1,53 @@
+name: 自動刪除 Feature 分支，feature 分支已經全 merge 到 develop 與 Qat 分支時
+
+on:
+  push:
+    branches: [workflow]  # 當 workflow 分支有更新時觸發 (測試說明用)
+  pull_request:
+    types: [closed]  # 當 PR 被關閉（即合併）時觸發
+    branches:
+      - develop
+      - Qat
+
+jobs:
+  delete-feature-branch:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write    
+    
+    steps:
+    - uses: actions/checkout@v3
+    - name: CheckOut 取得所有分支
+      run: |
+        git fetch --all
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+
+    - name: 檢查當 Pull Request (PR) 並且都 Merge 到 develop 與 Qat 時
+      id: check-merge
+      run: |
+        # 取得 Pull Request Id
+        PR_ID=${{ github.event.pull_request.number }}
+        
+        # 使用 GitHub API 檢查 Merge 分支的狀態碼(develop, Qat)
+        DEVELOP_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID/commits" | \
+          jq -r '.[].commit.message' | grep -q "Merge pull request" && echo "true" || echo "false")
+
+        QAT_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID/commits" | \
+          jq -r '.[].commit.message' | grep -q "Merge pull request" && echo "true" || echo "false")
+        
+        echo "develop merge status: $DEVELOP_MERGE_STATUS"
+        echo "Qat merge status: $QAT_MERGE_STATUS"
+
+        if [[ "$DEVELOP_MERGE_STATUS" == "true" && "$QAT_MERGE_STATUS" == "true" ]]; then
+          echo "Both DEV and QAT merges detected. Proceeding with branch deletion.";
+          echo "delete=true" >> $GITHUB_ENV
+        else
+          echo "PR is not merged into both DEV and QAT. Skipping branch deletion.";
+          echo "delete=false" >> $GITHUB_ENV
+        fi
+
+    
