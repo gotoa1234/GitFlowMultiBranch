@@ -32,13 +32,11 @@ jobs:
         
         # 使用 GitHub API 檢查 Merge 分支的狀態碼(develop, Qat)
         DEVELOP_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID/commits" | \
-          jq -r '.[].commit.message' | grep -q "Merge pull request" && echo "true" || echo "false")
+          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID" | jq -r '.merged')
 
         QAT_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID/commits" | \
-          jq -r '.[].commit.message' | grep -q "Merge pull request" && echo "true" || echo "false")
-        
+          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID" | jq -r '.merged')
+
         echo "develop merge status: $DEVELOP_MERGE_STATUS"
         echo "Qat merge status: $QAT_MERGE_STATUS"
 
