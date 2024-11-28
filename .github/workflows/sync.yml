@@ -1,0 +1,19 @@
+name: 從 workflow 分支的 .yml 檔同步到所有分支
+
+on:
+  push:
+    branches: [workflow]  # 當 workflow 分支有更新時觸發
+
+jobs:
+  sync-workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: 同步(Merge的方式)到目標分支
+        run: |
+          branches=("develop" "Qat" "staging" "main")
+          for branch in "${branches[@]}"; do
+            git checkout $branch
+            git merge workflow --no-ff
+            git push origin $branch
+          done
