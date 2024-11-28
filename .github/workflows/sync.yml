@@ -15,6 +15,6 @@ jobs:
           branches=("develop" "Qat" "staging" "main")
           for branch in "${branches[@]}"; do
             git checkout $branch
-            git merge workflow --no-ff
+            git merge workflow --no-ff --allow-unrelated-histories  # 允許合併不相關的歷史
             git push origin $branch
           done
