@@ -4,6 +4,9 @@ on:
   push:
     branches: [workflow]  # 當 workflow 分支有更新時觸發
 
+permissions:
+  contents: write
+
 jobs:
   sync-workflows:
     runs-on: ubuntu-latest
