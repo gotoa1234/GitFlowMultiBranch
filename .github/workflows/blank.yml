@@ -24,30 +24,3 @@ jobs:
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
 
-    - name: Check if the PR is merged into both DEV and QAT
-      id: check-merge
-      run: |
-        # Get the PR ID from the context
-        PR_ID=${{ github.event.pull_request.number }}
-        
-        # Use GitHub API to check the merge status for DEV and QAT
-        develop_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID/commits" | \
-          jq -r '.[].commit.message' | grep -q "Merge pull request" && echo "true" || echo "false")
-
-        Qat_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID/commits" | \
-          jq -r '.[].commit.message' | grep -q "Merge pull request" && echo "true" || echo "false")
-        
-        echo "DEV merge status: $develop_MERGE_STATUS"
-        echo "QAT merge status: $Qat_MERGE_STATUS"
-
-        if [[ "$develop_MERGE_STATUS" == "true" && "$Qat_MERGE_STATUS" == "true" ]]; then
-          echo "Both DEV and QAT merges detected. Proceeding with branch deletion.";
-          echo "delete=true" >> $GITHUB_ENV
-        else
-          echo "PR is not merged into both DEV and QAT. Skipping branch deletion.";
-          echo "delete=false" >> $GITHUB_ENV
-        fi
-
-    
