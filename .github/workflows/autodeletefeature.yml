@@ -2,9 +2,6 @@ name: 自動刪除 Feature 分支，feature 分支已經全 merge 到 develop �
 
 on:
   push:
-    branches: [workflow]  # 當 workflow 分支有更新時觸發 (測試說明用)
-  pull_request:
-    types: [closed]  # 當 PR 被關閉（即合併）時觸發
     branches:
       - develop
       - Qat
@@ -32,13 +29,11 @@ jobs:
         
         # 使用 GitHub API 檢查 Merge 分支的狀態碼(develop, Qat)
         DEVELOP_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID/commits" | \
-          jq -r '.[].commit.message' | grep -q "Merge pull request" && echo "true" || echo "false")
+          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID" | jq -r '.merged')
 
         QAT_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID/commits" | \
-          jq -r '.[].commit.message' | grep -q "Merge pull request" && echo "true" || echo "false")
-        
+          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID" | jq -r '.merged')
+
         echo "develop merge status: $DEVELOP_MERGE_STATUS"
         echo "Qat merge status: $QAT_MERGE_STATUS"
 
