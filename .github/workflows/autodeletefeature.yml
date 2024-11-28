@@ -26,7 +26,7 @@ jobs:
         git config user.email "actions@github.com"
         
         # 列出所有 feature 開頭的分支
-        FEATURE_BRANCHES=$(git branch -r | grep 'origin/feature' | sed 's/origin\///')
+        FEATURE_BRANCHES=$(git branch -r | grep 'origin/feature' | tr -d ' ')
         
         # 對每個 feature 分支進行檢查
         echo "開始檢查 feature 分支..."
@@ -39,8 +39,9 @@ jobs:
           
           if [ ! -z "$MERGED_TO_DEVELOP" ] && [ ! -z "$MERGED_TO_QAT" ]; then
             echo "分支 $branch 已合併到 develop 和 Qat，準備刪除..."
-            git push origin --delete ${branch#origin/}
-            echo "已刪除分支: $branch"
+            BRANCH_NAME=$(echo $branch | sed 's#origin/##')
+            git push origin --delete $BRANCH_NAME
+            echo "已刪除分支: $BRANCH_NAME"
           else
             echo "分支 $branch 尚未完全合併到 develop 和 Qat，保留分支"
           fi
