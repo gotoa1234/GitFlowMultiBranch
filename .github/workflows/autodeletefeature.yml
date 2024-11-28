@@ -2,9 +2,6 @@ name: 自動刪除 Feature 分支，feature 分支已經全 merge 到 develop �
 
 on:
   push:
-    branches: [workflow]  # 當 workflow 分支有更新時觸發 (測試說明用)
-  pull_request:
-    types: [closed]  # 當 PR 被關閉（即合併）時觸發
     branches:
       - develop
       - Qat
