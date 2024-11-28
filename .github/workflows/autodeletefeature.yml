@@ -11,38 +11,37 @@ jobs:
     runs-on: ubuntu-latest
     
     permissions:
-      contents: write    
+      contents: write
     
     steps:
     - uses: actions/checkout@v3
-    - name: CheckOut 取得所有分支
+      with:
+        fetch-depth: 0
+    
+    - name: 檢查並刪除已合併的 Feature 分支
       run: |
+        # 取得所有遠端分支
         git fetch --all
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
-
-    - name: 檢查當 Pull Request (PR) 並且都 Merge 到 develop 與 Qat 時
-      id: check-merge
-      run: |
-        # 取得 Pull Request Id
-        PR_ID=${{ github.event.pull_request.number }}
         
-        # 使用 GitHub API 檢查 Merge 分支的狀態碼(develop, Qat)
-        DEVELOP_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID" | jq -r '.merged')
-
-        QAT_MERGE_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_ID" | jq -r '.merged')
-
-        echo "develop merge status: $DEVELOP_MERGE_STATUS"
-        echo "Qat merge status: $QAT_MERGE_STATUS"
-
-        if [[ "$DEVELOP_MERGE_STATUS" == "true" && "$QAT_MERGE_STATUS" == "true" ]]; then
-          echo "Both DEV and QAT merges detected. Proceeding with branch deletion.";
-          echo "delete=true" >> $GITHUB_ENV
-        else
-          echo "PR is not merged into both DEV and QAT. Skipping branch deletion.";
-          echo "delete=false" >> $GITHUB_ENV
-        fi
-
-    
+        # 列出所有 feature 開頭的分支
+        FEATURE_BRANCHES=$(git branch -r | grep 'origin/feature' | sed 's/origin\///')
+        
+        # 對每個 feature 分支進行檢查
+        echo "開始檢查 feature 分支..."
+        for branch in $FEATURE_BRANCHES; do
+          echo "檢查分支: $branch"
+          
+          # 檢查是否同時合併到 develop 和 Qat
+          MERGED_TO_DEVELOP=$(git branch -r --contains $branch | grep 'origin/develop' || true)
+          MERGED_TO_QAT=$(git branch -r --contains $branch | grep 'origin/Qat' || true)
+          
+          if [ ! -z "$MERGED_TO_DEVELOP" ] && [ ! -z "$MERGED_TO_QAT" ]; then
+            echo "分支 $branch 已合併到 develop 和 Qat，準備刪除..."
+            git push origin --delete ${branch#origin/}
+            echo "已刪除分支: $branch"
+          else
+            echo "分支 $branch 尚未完全合併到 develop 和 Qat，保留分支"
+          fi
+        done
